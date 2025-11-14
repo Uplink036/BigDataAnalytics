@@ -106,20 +106,55 @@ PASS = fn => d => {
 const STATS_FREQ = 100;
 const URL = process.env.URL || 'http://localhost:8080/';
 var lastFile = null;
+var timePerFile = []
+
+function saveTimeStatistics(file) {
+    let timers = Timer.getTimers(file);
+    timePerFile.push([timers['total'], timers['match']])
+    return file;
+}
 
 function maybePrintStatistics(file, cloneDetector, cloneStore) {
     if (0 == cloneDetector.numberOfProcessedFiles % STATS_FREQ) {
         console.log('Processed', cloneDetector.numberOfProcessedFiles, 'files and found', cloneStore.numberOfClones, 'clones.');
         let timers = Timer.getTimers(file);
-        let str = 'Timers for last file processed: ';
+        let last1 = 'Timers for last file processed: ';
         for (t in timers) {
-            str += t + ': ' + (timers[t] / (1000n)) + ' µs '
+            last1 += t + ': ' + (timers[t] / (1000n)) + ' µs '
         }
-        console.log(str);
+        console.log(last1);
+        
+        let last10 = movingAvg(100);
+        console.log(last10);
+        
+        let last100 = movingAvg(10000);
+        console.log(last100);
+
         console.log('List of found clones available at', URL);
     }
 
     return file;
+
+    function movingAvg(number) {
+        if (number > timePerFile.length)
+            number = timePerFile.length;
+            let avgTotalTime = BigInt(0);
+        let avgMatchTime = BigInt(0);
+        for (let fileIndex = Math.max(timePerFile.length - (number+1), 0); 
+            fileIndex < timePerFile.length; 
+            fileIndex++) 
+        {
+            const time = timePerFile[fileIndex]
+            avgTotalTime += time[0];
+            avgMatchTime += time[1];
+        }
+        avgTotalTime = avgTotalTime / BigInt(number);
+        avgMatchTime = avgMatchTime / BigInt(number);
+        let outputString = 'Timers for last ' + number + ' files processed: ';
+        outputString +=    'total: ' + avgTotalTime / 1000n + ' µs ';
+        outputString +=    'match: ' + avgTotalTime / 1000n + ' µs ';
+        return outputString;
+    }
 }
 
 // Processing of the file
@@ -142,6 +177,7 @@ function processFile(filename, contents) {
         .then( (file) => cd.storeFile(file) )
         .then( (file) => Timer.endTimer(file, 'total') )
         .then( PASS( (file) => lastFile = file ))
+        .then( PASS( (file) => saveTimeStatistics(file)))
         .then( PASS( (file) => maybePrintStatistics(file, cd, cloneStore) ))
     // TODO Store the timers from every file (or every 10th file), create a new landing page /timers
     // and display more in depth statistics there. Examples include:
