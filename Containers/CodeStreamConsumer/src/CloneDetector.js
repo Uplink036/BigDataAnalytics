@@ -111,7 +111,24 @@ class CloneDetector {
         // Return: file, with file.instances only including Clones that have been expanded as much as they can,
         //         and not any of the Clones used during that expansion.
         //
-
+        if (file.instances.length === 0)
+            return file;
+        let consolidatedClones = [];
+        let currentClone = file.instances[0];
+        for (let index = 1; index < file.instances.length; index++ ) {
+            const is_next = currentClone.isNext(file.instances[index])
+            console.log(is_next,  currentClone.sourceChunk[currentClone.sourceChunk.length-1])
+            console.log(file.instances[index].sourceChunk[file.instances[index].sourceChunk.length-1])
+            console.log(file.instances[index].sourceChunk[file.instances[index].sourceChunk.length-2])
+            if (is_next) {
+                currentClone.expandWith(file.instances[index]);
+            }
+            else {
+                consolidatedClones.push(currentClone);
+                currentClone = file.instances[index];
+            }
+        }
+        file.instances = consolidatedClones
         return file;
     }
     
