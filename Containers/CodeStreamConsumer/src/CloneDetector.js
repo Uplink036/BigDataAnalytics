@@ -80,17 +80,29 @@ class CloneDetector {
     }
 
     #filterCloneCandidates(file, compareFile) {
-        let newInstances = []
+        let newInstances = [];
         for (let index = 0; index < file.chunks.length; index++ ) {
             const chunk = file.chunks[index]
-            const clones = compareFile.chunks
+            const firstClones = compareFile.chunks
                                 .filter((x) =>this.#chunkMatch(chunk, x))
                                 .map((x) => new Clone(
                                     file.name, 
                                     compareFile.name,
                                     chunk,
-                                    x))
-            newInstances = newInstances.concat(clones)
+                                    x));
+            let uniqueClones = [];
+            for (let i = 0; i < firstClones.length; i++) {
+                let duplicate = false;
+                for (let j = i+1; j < firstClones.length; j++) {
+                    if (firstClones[i].equals(firstClones[j])) {
+                        duplicate = true;
+                        break;
+                    }
+                }
+                if (duplicate === false)
+                    uniqueClones.push(firstClones[i]);
+            } 
+            newInstances = newInstances.concat(uniqueClones);
         }
         file.instances = file.instances || [];        
         file.instances = file.instances.concat(newInstances);
