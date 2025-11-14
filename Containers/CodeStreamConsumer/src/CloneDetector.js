@@ -69,29 +69,29 @@ class CloneDetector {
     }
     
     #chunkMatch(first, second) {
+
         let match = true;
 
         if (first.length != second.length) { match = false; }
         for (let idx=0; idx < first.length; idx++) {
             if (!first[idx].equals(second[idx])) { match = false; }
         }
-
         return match;
     }
 
     #filterCloneCandidates(file, compareFile) {
-        // TODO
-        // For each chunk in file.chunks, find all #chunkMatch() in compareFile.chunks
-        // For each matching chunk, create a new Clone.
-        // Store the resulting (flat) array in file.instances.
-        // 
-        // TIP 1: Array.filter to find a set of matches, Array.map to return a new array with modified objects.
-        // TIP 2: You can daisy-chain calls to filter().map().filter().flat() etc.
-        // TIP 3: Remember that file.instances may have already been created, so only append to it.
-        //
-        // Return: file, including file.instances which is an array of Clone objects (or an empty array).
-        //
-
+        let newInstances = []
+        for (let index = 0; index < file.chunks.length; index++ ) {
+            const chunk = file.chunks[index]
+            const clones = compareFile.chunks
+                                .filter((x) =>this.#chunkMatch(chunk, x))
+                                .map((x) => new Clone(
+                                    file.name, 
+                                    compareFile.name,
+                                    chunk,
+                                    x))
+            newInstances = newInstances.concat(clones)
+        }
         file.instances = file.instances || [];        
         file.instances = file.instances.concat(newInstances);
         return file;
