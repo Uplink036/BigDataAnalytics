@@ -110,28 +110,12 @@ class CloneDetector {
     }
      
     #expandCloneCandidates(file) {
-        // TODO
-        // For each Clone in file.instances, try to expand it with every other Clone
-        // (using Clone::maybeExpandWith(), which returns true if it could expand)
-        // 
-        // Comment: This should be doable with a reduce:
-        //          For every new element, check if it overlaps any element in the accumulator.
-        //          If it does, expand the element in the accumulator. If it doesn't, add it to the accumulator.
-        //
-        // ASSUME: As long as you traverse the array file.instances in the "normal" order, only forward expansion is necessary.
-        // 
-        // Return: file, with file.instances only including Clones that have been expanded as much as they can,
-        //         and not any of the Clones used during that expansion.
-        //
         if (file.instances.length === 0)
             return file;
         let consolidatedClones = [];
         let currentClone = file.instances[0];
         for (let index = 1; index < file.instances.length; index++ ) {
             const is_next = currentClone.isNext(file.instances[index])
-            console.log(is_next,  currentClone.sourceChunk[currentClone.sourceChunk.length-1])
-            console.log(file.instances[index].sourceChunk[file.instances[index].sourceChunk.length-1])
-            console.log(file.instances[index].sourceChunk[file.instances[index].sourceChunk.length-2])
             if (is_next) {
                 currentClone.expandWith(file.instances[index]);
             }
@@ -140,6 +124,8 @@ class CloneDetector {
                 currentClone = file.instances[index];
             }
         }
+        if (currentClone.equals(consolidatedClones[consolidatedClones.length-1]) === false)
+            consolidatedClones.push(currentClone);
         file.instances = consolidatedClones
         return file;
     }
