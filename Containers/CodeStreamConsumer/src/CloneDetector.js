@@ -112,7 +112,8 @@ class CloneDetector {
                 currentClone = file.instances[index];
             }
         }
-        if (currentClone.equals(consolidatedClones[consolidatedClones.length-1]) === false)
+        if (consolidatedClones.length > 1 && 
+            currentClone.equals(consolidatedClones[consolidatedClones.length-1]) === false)
             consolidatedClones.push(currentClone);
         file.instances = consolidatedClones
         return file;
@@ -120,12 +121,10 @@ class CloneDetector {
     
     #consolidateClones(file) {
         const clones = file.instances;
-        console.log("number of clones:", clones.length)
         let uniqueClones = [];
         for (let i = 0; i < clones.length; i++) {
             const clone = clones[i];
             const equalCloneIndex = uniqueClones.findIndex((x) => x.equals(clone));
-            console.log(equalCloneIndex)
             if (equalCloneIndex === -1)
                 uniqueClones.push(clones[i]);
             else
