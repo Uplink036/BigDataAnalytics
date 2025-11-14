@@ -83,26 +83,14 @@ class CloneDetector {
         let newInstances = [];
         for (let index = 0; index < file.chunks.length; index++ ) {
             const chunk = file.chunks[index]
-            const firstClones = compareFile.chunks
+            const clones = compareFile.chunks
                                 .filter((x) =>this.#chunkMatch(chunk, x))
                                 .map((x) => new Clone(
                                     file.name, 
                                     compareFile.name,
                                     chunk,
                                     x));
-            let uniqueClones = [];
-            for (let i = 0; i < firstClones.length; i++) {
-                let duplicate = false;
-                for (let j = i+1; j < firstClones.length; j++) {
-                    if (firstClones[i].equals(firstClones[j])) {
-                        duplicate = true;
-                        break;
-                    }
-                }
-                if (duplicate === false)
-                    uniqueClones.push(firstClones[i]);
-            } 
-            newInstances = newInstances.concat(uniqueClones);
+            newInstances = newInstances.concat(clones);
         }
         file.instances = file.instances || [];        
         file.instances = file.instances.concat(newInstances);
@@ -131,19 +119,19 @@ class CloneDetector {
     }
     
     #consolidateClones(file) {
-        // TODO
-        // For each clone, accumulate it into an array if it is new
-        // If it isn't new, update the existing clone to include this one too
-        // using Clone::addTarget()
-        // 
-        // TIP 1: Array.reduce() with an empty array as start value.
-        //        Push not-seen-before clones into the accumulator
-        // TIP 2: There should only be one match in the accumulator
-        //        so Array.find() and Clone::equals() will do nicely.
-        //
-        // Return: file, with file.instances containing unique Clone objects that may contain several targets
-        //
-
+        const clones = file.instances;
+        console.log("number of clones:", clones.length)
+        let uniqueClones = [];
+        for (let i = 0; i < clones.length; i++) {
+            const clone = clones[i];
+            const equalCloneIndex = uniqueClones.findIndex((x) => x.equals(clone));
+            console.log(equalCloneIndex)
+            if (equalCloneIndex === -1)
+                uniqueClones.push(clones[i]);
+            else
+                uniqueClones[equalCloneIndex].addTarget(clone);
+        } 
+        file.instances = uniqueClones
         return file;
     }
     
@@ -172,19 +160,6 @@ class CloneDetector {
         let allFiles = this.#myFileStore.getAllFiles();
         file.instances = file.instances || [];
         for (let f of allFiles) {
-            // TODO implement these methods (or re-write the function matchDetect() to your own liking)
-            // 
-            // Overall process:
-            // 
-            // 1. Find all equal chunks in file and f. Represent each matching pair as a Clone.
-            //
-            // 2. For each Clone with endLine=x, merge it with Clone with endLine-1=x
-            //    remove the now redundant clone, rinse & repeat.
-            //    note that you may end up with several "root" Clones for each processed file f
-            //    if there are more than one clone between the file f and the current
-            //
-            // 3. If the same clone is found in several places, consolidate them into one Clone.
-            //
             file = this.#filterCloneCandidates(file, f); 
             file = this.#expandCloneCandidates(file);
             file = this.#consolidateClones(file); 
