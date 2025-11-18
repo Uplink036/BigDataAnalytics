@@ -24,6 +24,7 @@ function fileReceiver(req, res, next) {
 }
 
 app.get('/', viewClones );
+app.get('/time', viewTimeStatistics );
 
 const server = app.listen(PORT, () => { console.log('Listening for files on port', PORT); });
 
@@ -89,6 +90,150 @@ function viewClones(req, res, next) {
     page += listProcessedFilesHTML() + '\n';
     page += '</BODY></HTML>';
     res.send(page);
+}
+
+function viewTimeStatistics(req, res, next) {
+    let page = '<HTML><HEAD><TITLE>Processing Time Statistics</TITLE>';
+    page += '<script src="https://cdn.jsdelivr.net/npm/chart.js"></script></HEAD>\n';
+    page += '<BODY><H1>Processing Time Statistics</H1>\n';
+    page += '<P>' + getStatistics() + '</P>\n';
+    page += generateTimeStatsHTML();
+    page += generateTimeChart();
+    page += generateAccumalativeTimeChart();
+    page += '</BODY></HTML>';
+    res.send(page);
+}
+
+function generateTimeStatsHTML() {
+    if (timePerFile.length === 0) return '<p>No timing data available yet.</p>';
+    
+    let output = '<h2>Time Statistics</h2>\n';
+    
+    // Current stats
+    if (lastFile) {
+        let timers = Timer.getTimers(lastFile);
+        output += '<h3>Last File Processed:</h3>\n<ul>\n';
+        for (let t in timers) {
+            output += '<li>' + t + ': ' + (timers[t] / 1000n) + ' µs</li>\n';
+        }
+        output += '</ul>\n';
+    }
+    
+    // Moving averages
+    output += '<h3>Moving Averages:</h3>\n';
+    output += '<p>' + getMovingAverage(10) + '</p>\n';
+    output += '<p>' + getMovingAverage(100) + '</p>\n';
+    output += '<p>' + getMovingAverage(timePerFile.length) + '</p>\n';
+    
+    return output;
+}
+
+function getMovingAverage(number) {
+    if (timePerFile.length === 0) return 'No data available';
+    if (number > timePerFile.length) number = timePerFile.length;
+    
+    let avgTotalTime = BigInt(0);
+    let avgMatchTime = BigInt(0);
+    
+    for (let i = Math.max(timePerFile.length - number, 0); i < timePerFile.length; i++) {
+        avgTotalTime += timePerFile[i][0];
+        avgMatchTime += timePerFile[i][1];
+    }
+    
+    avgTotalTime = avgTotalTime / BigInt(number);
+    avgMatchTime = avgMatchTime / BigInt(number);
+    
+    return `Last ${number} files - Total: ${avgTotalTime / 1000n} µs, Match: ${avgMatchTime / 1000n} µs`;
+}
+
+function generateTimeChart() {
+    if (timePerFile.length === 0) return '';
+    
+    let totalTimes = timePerFile.map((time, index) => ({x: index + 1, y: Number(time[0] / 1000n)}));
+    let matchTimes = timePerFile.map((time, index) => ({x: index + 1, y: Number(time[1] / 1000n)}));
+    
+    return `
+    <h2>Processing Time Chart</h2>
+    <canvas id="timeChart" width="800" height="400"></canvas>
+    <script>
+    const ctx = document.getElementById('timeChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [{
+                label: 'Total Time (µs)',
+                data: ${JSON.stringify(totalTimes)},
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1
+            }, {
+                label: 'Match Time (µs)',
+                data: ${JSON.stringify(matchTimes)},
+                borderColor: 'rgb(255, 99, 132)',
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    type: 'linear',
+                    position: 'bottom',
+                    title: { display: true, text: 'File Number' }
+                },
+                y: {
+                    title: { display: true, text: 'Time (microseconds)' }
+                }
+            }
+        }
+    });
+    </script>`;
+}
+
+function generateAccumalativeTimeChart() {
+    if (timePerFile.length === 0) return '';
+    
+    let totalTimes = [];
+    const initialValue = 0n;
+    for (let i = 1; i <= timePerFile.length; i++)
+    {
+        totalTimes.push(timePerFile.slice(0, i).reduce((accumulator, currentValue) => accumulator + currentValue[0], initialValue))
+    }
+    
+    let labels = totalTimes.map((_, index) => index + 1);
+    let chartData = totalTimes.map(time => Number(time / 1000n));
+    
+    return `
+    <h2>Cumulative Processing Time Chart</h2>
+    <canvas id="timeAccumlativeChart" width="800" height="400"></canvas>
+    <script>
+    const ctx2 = document.getElementById('timeAccumlativeChart').getContext('2d');
+    new Chart(ctx2, {
+        type: 'line',
+        data: {
+            labels: ${JSON.stringify(labels)},
+            datasets: [{
+                label: 'Cumulative Total Time (µs)',
+                data: ${JSON.stringify(chartData)},
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    title: { display: true, text: 'File Number' }
+                },
+                y: {
+                    title: { display: true, text: 'Accumulative Time (microseconds)' }
+                }
+            }
+        }
+    });
+    </script>`;
 }
 
 // Some helper functions
