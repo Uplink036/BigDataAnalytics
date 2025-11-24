@@ -115,7 +115,9 @@ class CloneDetector {
         if (consolidatedClones.length > 1 && 
             currentClone.equals(consolidatedClones[consolidatedClones.length-1]) === false)
             consolidatedClones.push(currentClone);
-        file.instances = consolidatedClones
+        else if (consolidatedClones.length === 0 && file.instances.length > 1)
+            consolidatedClones.push(currentClone);
+        file.instances = consolidatedClones;
         return file;
     }
     
