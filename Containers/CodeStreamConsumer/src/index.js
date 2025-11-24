@@ -17,8 +17,13 @@ const form = formidable({multiples:false});
 app.post('/', fileReceiver );
 function fileReceiver(req, res, next) {
     form.parse(req, (err, fields, files) => {
-        fs.readFile(files.data.filepath, { encoding: 'utf8' })
-            .then( data => { return processFile(fields.name, data); });
+        if (files !== undefined && files.data !== undefined) {
+            fs.readFile(files.data.filepath, { encoding: 'utf8' })
+                .then( data => { return processFile(fields.name, data); });
+        }
+        else {
+            console.log("Unexpected Error trying to red req: ", req)
+        }
     });
     return res.end('');
 }
